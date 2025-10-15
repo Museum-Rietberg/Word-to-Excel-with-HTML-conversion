@@ -31,17 +31,43 @@ OUTPUT_FILE = os.path.join(output_dir, f"{basename}.xlsx")
 
 # Function to detect and convert common superscript patterns in text
 # Handles:
-# 1. French century notation: 'XIXe' -> 'XIX<sup>e</sup>'
-# 2. English ordinals: '1st', '2nd', '3rd', '4th' -> '1<sup>st</sup>', etc.
-# 3. Numerical measurements: 'km2' -> 'km<sup>2</sup>'
+# 1. French century notation: 'XIXe' -> 'XIXᵉ'
+# 2. English ordinals: '1st', '2nd', '3rd', '4th' -> '1ˢᵗ', '2ⁿᵈ', etc.
+# 3. Numerical measurements: 'km2' -> 'km²'
 def convert_superscripts(text):
     import re
-    # Handle French century numbers (e.g., "XIXe" -> "XIX<sup>e</sup>")
-    text = re.sub(r'([XVI]+)e\b', r'\1<sup>e</sup>', text)
-    # Handle English ordinals (e.g., "19th" -> "19<sup>th</sup>")
-    text = re.sub(r'(\d+)(st|nd|rd|th)\b', r'\1<sup>\2</sup>', text)
-    # Handle squared and cubic measurements (e.g., "km2" -> "km<sup>2</sup>")
-    text = re.sub(r'([a-zA-Z]+)(\d+)\b', r'\1<sup>\2</sup>', text)
+    
+    # Mapping for superscript characters available in Unicode
+    superscript_map = {
+        # Numbers
+        '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+        '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+        # Letters commonly used in ordinals
+        'a': 'ᵃ', 'e': 'ᵉ', 'h': 'ʰ', 'n': 'ⁿ', 'o': 'ᵒ',
+        'r': 'ʳ', 's': 'ˢ', 't': 'ᵗ', 'd': 'ᵈ'
+    }
+    
+    def replace_with_unicode(match):
+        text = match.group(2)
+        if all(c in superscript_map for c in text.lower()):
+            return match.group(1) + ''.join(superscript_map.get(c.lower(), c) for c in text)
+        return f"{match.group(1)}<sup>{text}</sup>"
+
+    # Handle French century numbers with Unicode superscript e
+    text = re.sub(r'([XVI]+)e\b', r'\1ᵉ', text)
+    
+    # Handle English ordinals with Unicode superscripts where possible
+    text = re.sub(r'(\d+)(st|nd|rd|th)\b', replace_with_unicode, text)
+    
+    # Handle squared and cubic measurements with Unicode superscripts
+    def replace_measurement(match):
+        base = match.group(1)
+        exp = match.group(2)
+        if all(c in superscript_map for c in exp):
+            return f"{base}{''.join(superscript_map[c] for c in exp)}"
+        return f"{base}<sup>{exp}</sup>"
+    
+    text = re.sub(r'([a-zA-Z]+)(\d+)\b', replace_measurement, text)
     return text
 
 # Function to process paragraph-level formatting, including:
@@ -188,4 +214,4 @@ for col in ws.iter_cols(1, ws.max_column):
 # Save the updated workbook
 wb.save(OUTPUT_FILE)
 
-print(f"The tables have been successfully combined into '{OUTPUT_FILE}' with adjusted column width and wrapping.")
+print(f"The tables have been successfully combined into '{OUTPUT_FILE}'.")
