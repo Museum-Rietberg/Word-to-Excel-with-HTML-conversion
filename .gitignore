@@ -1,4 +1,5 @@
 textSources/*
+!textSources/sample.docx
 _archiv/
 WIP/
 output/

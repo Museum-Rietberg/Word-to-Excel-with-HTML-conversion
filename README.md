@@ -4,7 +4,7 @@ A workaround Text to Table conversion for lack of an appropriate (headless) CMS
 ## Scripts Overview
 
 ### convertWordToExcel.py
-Converts structured Word documents to Excel format with advanced text processing capabilities:
+Converts structured Word documents (see textSources/sample.docx) to Excel format with advanced text processing capabilities:
 
 #### Text Formatting Features
 - Preserves italics using HTML `<em>` tags
@@ -45,11 +45,23 @@ Combines and processes content from multiple tables:
 - Preserves formatting and special characters
 - Creates a consolidated Excel output
 
+## Configuration
+### File Paths
+- Input Word documents go in the `textSources` folder
+- Processed Excel files are saved to the `output` folder
+- Default paths can be modified in the script configuration:
+  ```python
+  # In convertWordToExcel.py
+  INPUT_FILE = 'textSources/tabelle.docx'
+  OUTPUT_FILE = 'output/tabelle.xlsx'
+  ```
+
 ## Usage
 1. Place your Word documents in the `textSources` folder
-2. Run the appropriate script:
+2. Configure input/output paths in the script if needed
+3. Run the appropriate script:
    ```bash
    python convertWordToExcel.py   # For single document conversion
    python collectAllContentInExcel.py  # For combining multiple tables
    ```
-3. Find the processed Excel files in the `output` folder
+4. Find the processed Excel files in the `output` folder

@@ -3,6 +3,31 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment
+import tkinter as tk
+from tkinter import filedialog
+import os
+
+# Set up file dialog
+root = tk.Tk()
+root.withdraw()  # Hide the main window
+
+# Ask user to select input file
+print("Please select the Word document to process...")
+INPUT_FILE = filedialog.askopenfilename(
+    title="Select Word Document",
+    filetypes=[("Word Documents", "*.docx"), ("All Files", "*.*")],
+    initialdir="textSources"
+)
+
+if not INPUT_FILE:
+    print("No file selected. Exiting...")
+    exit()
+
+# Create output filename based on input filename
+basename = os.path.splitext(os.path.basename(INPUT_FILE))[0]
+output_dir = "output"
+os.makedirs(output_dir, exist_ok=True)  # Create output directory if it doesn't exist
+OUTPUT_FILE = os.path.join(output_dir, f"{basename}.xlsx")
 
 # Function to detect and convert common superscript patterns in text
 # Handles:
@@ -32,7 +57,10 @@ def process_paragraph(paragraph):
     for run in paragraph.runs:
         if run.italic:
             processed_text += f"<em>{run.text}</em>"
-        elif hasattr(run._element.rPr, 'vertAlign') and run._element.rPr.vertAlign.val == 'superscript':
+        elif (hasattr(run._element.rPr, 'vertAlign') and 
+              run._element.rPr.vertAlign is not None and 
+              hasattr(run._element.rPr.vertAlign, 'val') and
+              run._element.rPr.vertAlign.val == 'superscript'):
             # Handle explicit superscript formatting from Word
             processed_text += f"<sup>{run.text}</sup>"
         else:
@@ -60,7 +88,7 @@ def micro_typographic_rules(text):
     - Before semicolon, colon, and en dash (–)
     - After ordinal superscripts only (XIX<sup>e</sup>, 19<sup>th</sup>)
     - Around measurement units (km, m, cm, etc.)
-    - Around multiplication symbol (×)
+    - Around multiplication symbols (× or x between numbers)
     - Before currency symbols (€, $, £)
     - Before percentage and degree symbols (%, °)
     Example: '« text » ; : – XIX<sup>e</sup> siècle 20 km × 30 m 25 °C 100 €' 
@@ -82,19 +110,19 @@ def micro_typographic_rules(text):
     # Measurement units and dimensions (English, French, German)
     units = r'(?:km|m|cm|mm|ha|mètres?|meters?|Meter|Metern)'
     text = re.sub(rf'(\d+)\s+({units})\b', r'\1&nbsp;\2', text)
-    # Multiplication symbol in dimensions
-    text = re.sub(r'\s*[×x]\s*', '&nbsp;×&nbsp;', text)
-    # Temperature, percentages, currencies, and degrees
-    text = re.sub(r'(\d+)\s*([°%€$£]|EUR|CHF|USD)', r'\1&nbsp;\2', text)
+    # Multiplication symbol in dimensions (only between numbers with optional spaces)
+    text = re.sub(r'(\d+)\s*([×x])\s*(\d+)', r'\1&nbsp;\2&nbsp;\3', text)
+    # Temperature, percentages, currencies, and degrees (ensuring symbols don't appear mid-word)
+    text = re.sub(r'(\d+)\s*([°%€$£]|EUR|CHF|USD)\b', r'\1&nbsp;\2', text)
     # Time units (avoiding line breaks between number and unit)
     time_units = r'(?:h|min|s|Uhr|heures?|hours?|Stunden?)'
     text = re.sub(rf'(\d+)\s+({time_units})\b', r'\1&nbsp;\2', text)
-    # Common abbreviations that shouldn't break (e.g., i.e., etc.)
+    # Common abbreviations that shouldn't break (ensuring we match complete abbreviations)
     text = re.sub(r'\b(z\.\s*B\.|d\.\s*h\.|i\.\s*e\.|e\.\s*g\.|etc\.)\s+', r'\1&nbsp;', text)
     return text
 
 # Load the Word document
-doc = docx.Document('textSources/tabelle.docx')
+doc = docx.Document(INPUT_FILE)
 
 # Initialize an empty list to store the rows for the Excel file
 rows = []
@@ -143,11 +171,10 @@ for row in rows:
 df = pd.DataFrame(rows)
 
 # Save the DataFrame to an Excel file
-output_file = 'output/tabelle.xlsx'
-df.to_excel(output_file, index=False)
+df.to_excel(OUTPUT_FILE, index=False)
 
 # Load the workbook and select the active worksheet
-wb = load_workbook(output_file)
+wb = load_workbook(OUTPUT_FILE)
 ws = wb.active
 
 # Set the width of the column with title 'Fliesstext' to 400px and wrap its contents
@@ -159,6 +186,6 @@ for col in ws.iter_cols(1, ws.max_column):
             cell.alignment = Alignment(wrap_text=True)
 
 # Save the updated workbook
-wb.save(output_file)
+wb.save(OUTPUT_FILE)
 
-print("The tables have been successfully combined into 'output_file.xlsx' with adjusted column width and wrapping.")
+print(f"The tables have been successfully combined into '{OUTPUT_FILE}' with adjusted column width and wrapping.")
