@@ -1,5 +1,5 @@
-# noCMS-Text-workaround
-Text to Table conversion for lack of an appropriate (headless) CMS
+# Word to Excel with HTML conversion
+A workaround Text to Table conversion for lack of an appropriate (headless) CMS
 
 ## Scripts Overview
 
